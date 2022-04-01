@@ -4,9 +4,21 @@ use \Codeception\Util\Locator;
 class BasicsCest
 {
 	private $faker;
+	protected $create_user_data;
 
 	public function __construct(){
 		$this->faker = Faker\Factory::create('pt_BR');
+		$this->create_user_data = [ 
+			'first_name' => $this->faker->firstName(),
+			'last_name' => $this->faker->lastName,
+			'company' => $this->faker->word,
+			'address_1' => $this->faker->word,
+			'city' => $this->faker->word,
+			'postcode' => '99999999',
+			'phone' => '999999',
+			'email' => $this->faker->email,
+			'password' => $this->faker->word,
+		];
 	}
 	// tests
 	public function Login(AcceptanceTester $I)
@@ -16,6 +28,88 @@ class BasicsCest
 		$I->loginAsAdmin();
 		$I->amOnAdminPage('/');
 		$I->see('Painel');
+	}
+
+	public function CheckoutCreateAccount(AcceptanceTester $I)
+	{
+		$I->amOnPage('/product/product-name/');
+		$I->click('add-to-cart');
+		$I->seeCurrentURLEquals('/product/product-name/');
+		$I->click('View cart');
+		$I->amOnPage('/cart/');
+		$I->click('Proceed to checkout');
+		$I->amOnPage('/checkout/');
+		$I->fillField('#billing_first_name', $this->create_user_data[ 'first_name' ]);
+		$I->fillField('#billing_last_name', $this->create_user_data[ 'last_name' ]);
+		$I->fillField('#billing_company', $this->create_user_data[ 'company' ]);
+		$I->fillField('#billing_address_1', $this->create_user_data[ 'address_1' ]);
+		$I->fillField('#billing_city', $this->create_user_data[ 'city' ]);
+		$I->fillField('#billing_phone', $this->create_user_data[ 'phone' ]);
+		$I->fillField('#billing_email', $this->create_user_data[ 'email' ] );
+		$I->checkOption('createaccount');
+		//$I->waitForElement('#account_password', 10); //TO DO REFATORAR USANDO WAITFOR
+
+		$I->wait(2);
+
+		$I->fillField('#account_password', $this->create_user_data[ 'password' ] );
+		$I->fillField('#billing_postcode', $this->create_user_data[ 'postcode' ]);
+
+
+		$I->click([ 'id' => 'place_order']);
+		$I->wait(2);
+
+		$I->see('Order received');
+
+		//$password = $I->grabTextFrom('#password');
+		$order_id = $I->grabTextFrom( Locator::find( 'li', ['class' => 'woocommerce-order-overview__order order'] ) );
+		$order_id = str_replace( 'ORDER NUMBER:', '', $order_id );
+
+		$I->wait(5);
+
+		$I->logOut();
+
+		$I->amOnPage('/');
+		$I->click('My account');
+		$I->amOnPage('/my-account/');
+
+		$I->loginAs( $this->create_user_data[ 'email' ], $this->create_user_data[ 'password' ] );
+
+		$I->amOnPage('/my-account/');
+		$I->amOnPage('/my-account/orders/');
+
+		$I->see($order_id); 
+
+		//$I->seeInDatabase('wp_users', ['user_email' => $this->create_user_email]); //TO DO VERIFICAR CRIAÇÂO USUÁRIO
+	}
+
+	public function EditAccount( AcceptanceTester $I )
+	{
+
+
+
+		$new_last_name = $this->faker->lastName;
+
+		//Edição do usuário
+		$I->click('Account details');
+		$I->amOnPage('/my-account/edit-account/');
+		$I->fillField( '#account_last_name', $new_last_name );
+		$I->click('save_account_details');
+		$I->amOnPage('/my-account/');
+		//$I->see('Account details changed successfully.');
+		$I->click('Account details');
+		$I->amOnPage('/my-account/edit-account/');
+		$I->see($new_last_name);
+		$I->click('Shop');
+		$I->amOnPage('/shop/');
+		$I->click('Add to cart');
+		$I->amOnPage('/shop/');
+		$I->click('View cart');
+		$I->amOnPage('/cart/');
+		$I->click('Proceed to checkout');
+		$I->amOnPage('/checkout/');
+		$I->wait(2);
+		$I->see('Order received');
+
 	}
 
 	public function Checkout(AcceptanceTester $I)
@@ -30,7 +124,6 @@ class BasicsCest
 		$I->amOnPage('/checkout/');
 		$I->see('Checkout');
 
-
 		$I->fillField('#billing_first_name', $this->faker->firstName());
 		$I->fillField('#billing_last_name', $this->faker->lastName);
 		$I->fillField('#billing_company', $this->faker->company);
@@ -41,7 +134,6 @@ class BasicsCest
 		$I->fillField('#billing_postcode', $this->faker->postcode);
 		$I->fillField('#billing_phone', $this->faker->phone);
 		$I->fillField('#billing_email', $this->faker->email);
-
 
 		$I->wait(2);
 		$I->click([ 'id' => 'place_order']);
