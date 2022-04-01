@@ -34,4 +34,5 @@ modules:
             adminPassword: '%USER_PASS%'
             adminUrl: /wp-admin
 
-step_decorators: ~
+step_decorators:
+  - \Codeception\Step\TryTo
